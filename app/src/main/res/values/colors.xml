@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Neutral Colors -->
+    <color name="neutral_50">#F9FAFB</color>
+    <color name="neutral_100">#F3F4F6</color>
+    <color name="neutral_200">#E5E7EB</color>
+    <color name="neutral_800">#1F2937</color>
+    <color name="neutral_900">#111827</color>
+    <color name="neutral_950">#030712</color>
+
+    <!-- Blue theme colors -->
+    <color name="blue_primary">#3b82f6</color>
+    <color name="blue_primary_dark">#2563eb</color>
+    <color name="blue_primary_light">#60a5fa</color>
+    
+    <!-- Semantic Colors -->
+    <color name="error">#EF4444</color>
+    <color name="error_container">#FEE2E2</color>
+    <color name="on_error_container">#991B1B</color>
+</resources>
