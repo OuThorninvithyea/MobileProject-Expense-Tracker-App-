@@ -3,6 +3,8 @@ package com.example.myapplication;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,6 +30,9 @@ public class SettingsFragment extends Fragment {
     private SharedPreferences prefs;
     private static final String PREFS_NAME = "AppSettings";
     private static final String KEY_DARK_MODE = "dark_mode";
+    
+    private final Handler debounceHandler = new Handler(Looper.getMainLooper());
+    private Runnable debounceRunnable;
 
     @Nullable
     @Override
@@ -52,11 +57,6 @@ public class SettingsFragment extends Fragment {
         // Load and set dark mode switch state
         loadDarkModeState();
         
-        // Set switch listener
-        switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            toggleDarkMode(isChecked);
-        });
-
         LinearLayout layoutDarkMode = view.findViewById(R.id.layoutDarkMode);
         layoutDarkMode.setOnClickListener(v -> {
              switchDarkMode.setChecked(!switchDarkMode.isChecked());
@@ -101,7 +101,11 @@ public class SettingsFragment extends Fragment {
         switchDarkMode.setOnCheckedChangeListener(null);
         switchDarkMode.setChecked(isDarkMode);
         switchDarkMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            toggleDarkMode(isChecked);
+            if (debounceRunnable != null) {
+                debounceHandler.removeCallbacks(debounceRunnable);
+            }
+            debounceRunnable = () -> toggleDarkMode(isChecked);
+            debounceHandler.postDelayed(debounceRunnable, 500);
         });
     }
 
@@ -208,6 +212,14 @@ public class SettingsFragment extends Fragment {
         });
 
         dialog.show();
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (debounceRunnable != null) {
+            debounceHandler.removeCallbacks(debounceRunnable);
+        }
     }
 
     @Override
