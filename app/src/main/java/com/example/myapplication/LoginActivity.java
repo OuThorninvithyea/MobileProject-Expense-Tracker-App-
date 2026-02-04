@@ -11,6 +11,15 @@ import androidx.appcompat.app.AppCompatDelegate;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
+/**
+ * LoginActivity handles user authentication.
+ * It serves as the entry point of the application (LAUNCHER activity).
+ *
+ * Responsibilities:
+ * 1. Checks if a user is already logged in.
+ * 2. If yes, redirects to MainActivity.
+ * 3. If no, provides UI for logging in or navigating to Signup/Forgot Password.
+ */
 public class LoginActivity extends AppCompatActivity {
     private TextInputEditText etUsername, etPassword;
     private TextView tvError;
@@ -28,12 +37,14 @@ public class LoginActivity extends AppCompatActivity {
         
         setContentView(R.layout.activity_login);
 
+        // Initialize DataManager singleton
         dataManager = DataManager.getInstance(this);
 
-        // Check if user is already logged in
+        // Check persistent login state using SharedPreferences info stored in DataManager
+        // If a user is currently logged in, skip the login screen and go directly to the dashboard
         if (dataManager.getCurrentUser() != null) {
             startActivity(new Intent(this, MainActivity.class));
-            finish();
+            finish(); // Finish LoginActivity so user can't go back to it with 'Back' button
             return;
         }
 
@@ -80,20 +91,28 @@ public class LoginActivity extends AppCompatActivity {
             .show();
     }
 
+    /**
+     * Handles the login button click.
+     * Validates input and delegates authentication to DataManager.
+     */
     private void handleLogin() {
         String username = etUsername.getText().toString().trim();
         String password = etPassword.getText().toString();
 
+        // Basic validation
         if (username.isEmpty() || password.isEmpty()) {
             showError("Please fill in all fields");
             return;
         }
 
+        // Attempt login via DataManager
         DataManager.LoginResult result = dataManager.login(username, password);
         if (result.success) {
+            // Navigate to main app
             startActivity(new Intent(this, MainActivity.class));
             finish();
         } else {
+            // Show error message
             showError(result.error);
         }
     }

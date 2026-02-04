@@ -2,13 +2,18 @@ package com.example.myapplication;
 
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -30,12 +35,35 @@ public class AddExpenseFragment extends Fragment {
     private com.google.android.material.textfield.TextInputLayout tilCustomCategory;
     private MaterialButton btnSave;
     private GridLayout gridCategories;
+    private ImageView ivExpenseImage;
+    private TextView tvAddImage;
+    private MaterialCardView cardImage;
+    private Uri selectedImageUri;
+    private ActivityResultLauncher<String> imagePickerLauncher;
     private String selectedCategory = "Food";
     private String customCategoryName = ""; // Store custom category name
     private TextView othersCategoryLabel; // Reference to "Others" category label
     private DataManager dataManager;
     private List<String> categoryList = new ArrayList<>();
     private final Map<String, String> iconMap = new HashMap<>();
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        imagePickerLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null) {
+                try {
+                    requireContext().getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                selectedImageUri = uri;
+                ivExpenseImage.setImageURI(uri);
+                ivExpenseImage.setVisibility(View.VISIBLE);
+                tvAddImage.setVisibility(View.GONE);
+            }
+        });
+    }
 
     @Nullable
     @Override
@@ -55,6 +83,11 @@ public class AddExpenseFragment extends Fragment {
         tilCustomCategory = view.findViewById(R.id.tilCustomCategory);
         btnSave = view.findViewById(R.id.btnSave);
         gridCategories = view.findViewById(R.id.gridCategories);
+        ivExpenseImage = view.findViewById(R.id.ivExpenseImage);
+        tvAddImage = view.findViewById(R.id.tvAddImage);
+        cardImage = view.findViewById(R.id.cardImage);
+
+        cardImage.setOnClickListener(v -> imagePickerLauncher.launch("image/*"));
 
         // Initialize icons
         iconMap.put("Food", "🍔");
@@ -374,7 +407,7 @@ public class AddExpenseFragment extends Fragment {
     }
     
     private void performSave(String category, double amount, String note, String date) {
-        long id = dataManager.addExpense(category, amount, note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date);
+        long id = dataManager.addExpense(category, amount, note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date, selectedImageUri != null ? selectedImageUri.toString() : null);
         if (id > 0) {
             Toast.makeText(requireContext(), "Expense saved", Toast.LENGTH_SHORT).show();
             etAmount.setText("");
@@ -385,6 +418,13 @@ public class AddExpenseFragment extends Fragment {
             customCategoryName = ""; 
             etCustomCategory.setText(""); 
             tilCustomCategory.setVisibility(View.GONE); 
+            
+            // Reset image selection
+            selectedImageUri = null;
+            ivExpenseImage.setImageURI(null);
+            ivExpenseImage.setVisibility(View.GONE);
+            tvAddImage.setVisibility(View.VISIBLE);
+            
             updateCategorySelection();
             
             if (getActivity() instanceof MainActivity) {

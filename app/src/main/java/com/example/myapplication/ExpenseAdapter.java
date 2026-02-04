@@ -4,8 +4,10 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
+import android.net.Uri;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
@@ -51,6 +53,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
 
     class ExpenseViewHolder extends RecyclerView.ViewHolder {
         private TextView tvCategory, tvNote, tvAmount, tvCategoryIcon, tvDate;
+        private ImageView ivExpenseImage;
         private android.widget.ImageButton btnMenu;
 
         public ExpenseViewHolder(@NonNull View itemView) {
@@ -60,6 +63,7 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
             tvAmount = itemView.findViewById(R.id.tvAmount);
             tvCategoryIcon = itemView.findViewById(R.id.tvCategoryIcon);
             tvDate = itemView.findViewById(R.id.tvDate);
+            ivExpenseImage = itemView.findViewById(R.id.ivExpenseImage);
             btnMenu = itemView.findViewById(R.id.btnMenu);
         }
 
@@ -67,6 +71,14 @@ public class ExpenseAdapter extends RecyclerView.Adapter<ExpenseAdapter.ExpenseV
             tvCategory.setText(expense.category);
             tvNote.setText(expense.note);
             tvAmount.setText(String.format(Locale.getDefault(), "-$%.2f", expense.amount));
+            
+            // Bind image
+            if (expense.imageUri != null && !expense.imageUri.isEmpty()) {
+                ivExpenseImage.setVisibility(View.VISIBLE);
+                ivExpenseImage.setImageURI(Uri.parse(expense.imageUri));
+            } else {
+                ivExpenseImage.setVisibility(View.GONE);
+            }
             
             // Set date - show "Category • Date" format or just date if category is already shown separately
             if (expense.date != null && !expense.date.isEmpty()) {

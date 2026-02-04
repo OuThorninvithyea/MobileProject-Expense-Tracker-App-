@@ -11,9 +11,15 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * DatabaseHelper manages the SQLite database creation and version management.
+ * It extends SQLiteOpenHelper to handle database lifecycle events (create, upgrade, open).
+ *
+ * This class defines the database schema including tables for Users, Expenses, and Budgets.
+ */
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "expense_tracker.db";
-    private static final int DATABASE_VERSION = 4; // Incremented to force complete database reset
+    private static final int DATABASE_VERSION = 5; // Incremented to add image URI
 
     // Users table
     private static final String TABLE_USERS = "users";
@@ -30,6 +36,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String COL_EXPENSE_AMOUNT = "amount";
     private static final String COL_EXPENSE_NOTE = "note";
     private static final String COL_EXPENSE_DATE = "date";
+    private static final String COL_EXPENSE_IMAGE_URI = "image_uri";
 
     // Budgets table
     private static final String TABLE_BUDGETS = "budgets";
@@ -45,6 +52,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.d("DatabaseHelper", "DatabaseHelper constructor called");
     }
 
+    /**
+     * Called when the database is created for the first time.
+     * This is where the creation of tables and the initial population of the tables should happen.
+     *
+     * @param db The database.
+     */
     @Override
     public void onCreate(SQLiteDatabase db) {
         try {
@@ -70,6 +83,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     COL_EXPENSE_AMOUNT + " REAL NOT NULL, " +
                     COL_EXPENSE_NOTE + " TEXT, " +
                     COL_EXPENSE_DATE + " TEXT, " +
+                    COL_EXPENSE_IMAGE_URI + " TEXT, " +
                     "FOREIGN KEY(" + COL_EXPENSE_USER_ID + ") REFERENCES " + TABLE_USERS + "(" + COL_USER_ID + "))";
             db.execSQL(createExpensesTable);
             Log.d("DatabaseHelper", "Expenses table created");
@@ -110,12 +124,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
     
     // Method to completely reset the database
+    /**
+     * Completely resets the database by deleting the database file and recreating it.
+     * This is a destructive operation used for debugging or "Factory Reset" features.
+     *
+     * @param context Context needed to delete the database file
+     */
     public void resetDatabase(Context context) {
         Log.d("DatabaseHelper", "=== RESETTING DATABASE COMPLETELY ===");
         try {
             // Close any open database connections first
             SQLiteDatabase db = null;
             try {
+                // Get writable database to close it properly if open
                 db = this.getWritableDatabase();
                 if (db != null && db.isOpen()) {
                     // Drop all tables
@@ -158,6 +179,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.d("DatabaseHelper", "=== DATABASE RESET COMPLETED ===");
     }
 
+    /**
+     * Hashes a password using SHA-256 for secure storage.
+     * Never store plain text passwords!
+     *
+     * @param password The plain text password
+     * @return The SHA-256 hash string, or null if error
+     */
     private String hashPassword(String password) {
         if (password == null) {
             Log.e("DatabaseHelper", "Hash error: password is null");
@@ -528,7 +556,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public long addExpense(int userId, String category, double amount, String note, String date) {
+    /**
+     * Inserts a new expense into the database.
+     *
+     * @param userId   The ID of the user owning the expense
+     * @param category Expense category
+     * @param amount   Expense amount
+     * @param note     Optional note
+     * @param date     Date of expense
+     * @param imageUri Optional receipt image URI
+     * @return The row ID of the newly inserted expense, or -1 if an error occurred
+     */
+    public long addExpense(int userId, String category, double amount, String note, String date, String imageUri) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COL_EXPENSE_USER_ID, userId);
@@ -536,6 +575,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COL_EXPENSE_AMOUNT, amount);
         values.put(COL_EXPENSE_NOTE, note);
         values.put(COL_EXPENSE_DATE, date);
+        values.put(COL_EXPENSE_IMAGE_URI, imageUri);
 
         long id = db.insert(TABLE_EXPENSES, null, values);
         db.close();
@@ -545,7 +585,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public String getExpenses(int userId) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_EXPENSES,
-                new String[]{COL_EXPENSE_ID, COL_EXPENSE_CATEGORY, COL_EXPENSE_AMOUNT, COL_EXPENSE_NOTE, COL_EXPENSE_DATE},
+                new String[]{COL_EXPENSE_ID, COL_EXPENSE_CATEGORY, COL_EXPENSE_AMOUNT, COL_EXPENSE_NOTE, COL_EXPENSE_DATE, COL_EXPENSE_IMAGE_URI},
                 COL_EXPENSE_USER_ID + "=?",
                 new String[]{String.valueOf(userId)},
                 null, null, COL_EXPENSE_ID + " DESC");
@@ -559,7 +599,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     .append("\"category\":\"").append(cursor.getString(1) != null ? cursor.getString(1) : "").append("\",")
                     .append("\"amount\":").append(cursor.getDouble(2)).append(",")
                     .append("\"note\":\"").append(escapeJson(cursor.isNull(3) ? "" : cursor.getString(3))).append("\",")
-                    .append("\"date\":\"").append(escapeJson(cursor.isNull(4) ? "" : cursor.getString(4))).append("\"")
+                    .append("\"date\":\"").append(escapeJson(cursor.isNull(4) ? "" : cursor.getString(4))).append("\",")
+                    .append("\"imageUri\":\"").append(escapeJson(cursor.isNull(5) ? "" : cursor.getString(5))).append("\"")
                     .append("}");
             }
             cursor.close();
@@ -569,7 +610,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return json.toString();
     }
 
-    public boolean updateExpense(int expenseId, String category, double amount, String note, String date) {
+    public boolean updateExpense(int expenseId, String category, double amount, String note, String date, String imageUri) {
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             if (db == null) {
@@ -582,6 +623,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             values.put(COL_EXPENSE_AMOUNT, amount);
             values.put(COL_EXPENSE_NOTE, note);
             values.put(COL_EXPENSE_DATE, date);
+            values.put(COL_EXPENSE_IMAGE_URI, imageUri);
 
             int rows = db.update(TABLE_EXPENSES, values, COL_EXPENSE_ID + "=?",
                     new String[]{String.valueOf(expenseId)});

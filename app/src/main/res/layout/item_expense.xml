@@ -57,6 +57,15 @@
                 android:textSize="10sp"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="2dp" />
+
+            <ImageView
+                android:id="@+id/ivExpenseImage"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:layout_marginTop="8dp"
+                android:contentDescription="Expense Image" />
         </LinearLayout>
 
         <LinearLayout

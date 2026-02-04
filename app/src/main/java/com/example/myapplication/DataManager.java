@@ -8,6 +8,13 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DataManager serves as the central data access layer (Repository Pattern) for the application.
+ * It manages interactions between the UI controllers (Activities/Fragments) and the underlying data sources
+ * (SQLite Database and SharedPreferences).
+ *
+ * It uses the Singleton pattern to ensure only one instance exists throughout the app lifecycle.
+ */
 public class DataManager {
     private static DataManager instance;
     private DatabaseHelper dbHelper;
@@ -48,6 +55,13 @@ public class DataManager {
         android.util.Log.d("DataManager", "Database reset completed");
     }
 
+    /**
+     * Public method to get the singleton instance of DataManager.
+     * Uses double-checked locking (if synchronized) or simple null check here for thread safety context.
+     *
+     * @param context Application context needed for database and prefs initialization
+     * @return The single instance of DataManager
+     */
     public static synchronized DataManager getInstance(Context context) {
         if (instance == null) {
             instance = new DataManager(context.getApplicationContext());
@@ -56,10 +70,18 @@ public class DataManager {
     }
 
     // Authentication methods
+    /**
+     * Authenticates a user with the provided credentials.
+     *
+     * @param username The username input
+     * @param password The password input
+     * @return LoginResult containing success status, user object, or error message
+     */
     public LoginResult login(String username, String password) {
         android.util.Log.d("DataManager", "Login attempt for: " + username);
         DatabaseHelper.User user = dbHelper.login(username, password);
         if (user != null) {
+            // Save login session to SharedPreferences to keep user logged in
             SharedPreferences.Editor editor = prefs.edit();
             editor.putInt("userId", user.id);
             editor.putString("username", user.username);
@@ -168,17 +190,34 @@ public class DataManager {
     }
 
     // Expense methods
-    public long addExpense(String category, double amount, String note, String date) {
+    /**
+     * Adds a new expense record for the currently logged-in user.
+     *
+     * @param category Expense category (e.g., Food, Transport)
+     * @param amount   Monetary value
+     * @param note     Optional description
+     * @param date     Date string
+     * @param imageUri Optional URI for receipt image
+     * @return The ID of the new expense, or -1 if failed
+     */
+    public long addExpense(String category, double amount, String note, String date, String imageUri) {
         int userId = prefs.getInt("userId", -1);
         if (userId <= 0) return -1;
-        return dbHelper.addExpense(userId, category, amount, note, date);
+        return dbHelper.addExpense(userId, category, amount, note, date, imageUri);
     }
 
+    /**
+     * Retrieves all expenses for the current user.
+     * Parses the JSON string returned by DatabaseHelper into a List of Expense objects.
+     *
+     * @return List of Expense objects, or empty list if none found or error
+     */
     public List<Expense> getExpenses() {
         int userId = prefs.getInt("userId", -1);
         if (userId <= 0) return new ArrayList<>();
         
         try {
+            // DatabaseHelper returns data as a JSON string to decouple implementation
             String json = dbHelper.getExpenses(userId);
             JSONArray jsonArray = new JSONArray(json);
             List<Expense> expenses = new ArrayList<>();
@@ -190,7 +229,8 @@ public class DataManager {
                     obj.getString("category"),
                     obj.getDouble("amount"),
                     obj.getString("note"),
-                    obj.getString("date")
+                    obj.getString("date"),
+                    obj.optString("imageUri", "")
                 );
                 expenses.add(expense);
             }
@@ -200,8 +240,8 @@ public class DataManager {
         }
     }
 
-    public boolean updateExpense(int expenseId, String category, double amount, String note, String date) {
-        return dbHelper.updateExpense(expenseId, category, amount, note, date);
+    public boolean updateExpense(int expenseId, String category, double amount, String note, String date, String imageUri) {
+        return dbHelper.updateExpense(expenseId, category, amount, note, date, imageUri);
     }
 
     public boolean deleteExpense(int expenseId) {
@@ -311,6 +351,13 @@ public class DataManager {
     }
 
     // Check if adding an expense would exceed the budget
+    /**
+     * Checks if adding a new expense amount would exceed the set budget for that category.
+     *
+     * @param category The category to check
+     * @param amount   The amount of the new expense
+     * @return BudgetCheckResult containing calculation details and whether budget is exceeded
+     */
     public BudgetCheckResult checkBudget(String category, double amount) {
         List<Budget> budgets = getBudgets();
         
@@ -410,13 +457,15 @@ public class DataManager {
         public double amount;
         public String note;
         public String date;
+        public String imageUri;
 
-        public Expense(int id, String category, double amount, String note, String date) {
+        public Expense(int id, String category, double amount, String note, String date, String imageUri) {
             this.id = id;
             this.category = category;
             this.amount = amount;
             this.note = note;
             this.date = date;
+            this.imageUri = imageUri;
         }
     }
 

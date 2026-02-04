@@ -8,6 +8,15 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
+/**
+ * MainActivity is the central hub of the application after login.
+ * It hosts the BottomNavigationView and manages the swapping of Fragments.
+ *
+ * Responsibilities:
+ * 1. Validates session (redirects to LoginActivity if not logged in).
+ * 2. Sets up the bottom navigation menu.
+ * 3. Handles switching between Home, Analytics, Add, Budget, and Settings fragments.
+ */
 public class MainActivity extends AppCompatActivity {
     public BottomNavigationView bottomNavigation;
     private DataManager dataManager;
@@ -25,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
 
         dataManager = DataManager.getInstance(this);
 
-        // Check if user is logged in
+        // Security check: Ensure user is still logged in when reaching MainActivity
         if (dataManager.getCurrentUser() == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
@@ -33,10 +42,13 @@ public class MainActivity extends AppCompatActivity {
         }
 
         bottomNavigation = findViewById(R.id.bottomNavigation);
+        
+        // Handle navigation item clicks
         bottomNavigation.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
             
+            // Map menu IDs to correspond Fragments
             if (itemId == R.id.nav_home) {
                 selectedFragment = new HomeFragment();
             } else if (itemId == R.id.nav_analytics) {
@@ -49,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
                 selectedFragment = new SettingsFragment();
             }
 
+            // Perform the fragment transaction
             if (selectedFragment != null) {
                 getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragmentContainer, selectedFragment)

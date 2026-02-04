@@ -30,6 +30,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * HomeFragment displays the main dashboard of the application.
+ * It shows a list of expenses and the total amount spent.
+ *
+ * Responsibilities:
+ * 1. Loads expenses from DataManager.
+ * 2. Provides search/filtering functionality.
+ * 3. Provides sorting options (Date, Amount, Category).
+ * 4. Handles clicks to edit or delete expenses.
+ */
 public class HomeFragment extends Fragment {
     private RecyclerView rvExpenses;
     private TextView tvTotalAmount;
@@ -51,13 +61,16 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Initialize DataManager with context
         dataManager = DataManager.getInstance(requireContext());
+        
+        // Setup Views
         rvExpenses = view.findViewById(R.id.rvExpenses);
         tvTotalAmount = view.findViewById(R.id.tvTotalAmount);
         etSearch = view.findViewById(R.id.etSearch);
         btnSort = view.findViewById(R.id.btnSort);
 
-        // Setup search
+        // Setup search: Listen for text changes to filter list in real-time
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -65,16 +78,17 @@ public class HomeFragment extends Fragment {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 searchQuery = s.toString().toLowerCase().trim();
-                loadExpenses();
+                loadExpenses(); // Reload list with new filter
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
 
-        // Setup sort button
+        // Setup sort button to show popup menu
         btnSort.setOnClickListener(v -> showSortMenu());
 
+        // Initialize RecyclerView Adapter with empty list and click listeners
         adapter = new ExpenseAdapter(new ArrayList<>(), new ExpenseAdapter.OnExpenseClickListener() {
             @Override
             public void onEditClick(DataManager.Expense expense) {
@@ -83,12 +97,13 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onDeleteClick(DataManager.Expense expense) {
+                // Show confirmation before deletion
                 new AlertDialog.Builder(requireContext())
                     .setTitle("Delete Expense")
                     .setMessage("Are you sure to delete it?")
                     .setPositiveButton("Delete", (dialog, which) -> {
                         if (dataManager.deleteExpense(expense.id)) {
-                            loadExpenses();
+                            loadExpenses(); // Refresh list after delete
                             Toast.makeText(requireContext(), "Expense deleted", Toast.LENGTH_SHORT).show();
                         }
                     })
@@ -100,21 +115,27 @@ public class HomeFragment extends Fragment {
         rvExpenses.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvExpenses.setAdapter(adapter);
 
+        // Initial load of data
         loadExpenses();
     }
 
+    /**
+     * Loads, filters, sorts, and displays expenses.
+     * Also calculates and updates the total amount.
+     */
     private void loadExpenses() {
         allExpenses = dataManager.getExpenses();
         
         // Filter expenses based on search query
         List<DataManager.Expense> filteredExpenses = filterExpenses(allExpenses);
         
-        // Sort expenses
+        // Sort expenses based on current sort criteria
         List<DataManager.Expense> sortedExpenses = sortExpenses(filteredExpenses);
         
+        // Update adapter to refresh UI
         adapter.updateExpenses(sortedExpenses);
 
-        // Calculate total from filtered expenses
+        // Calculate total amount from the currently displayed (filtered) list
         double total = 0;
         for (DataManager.Expense expense : sortedExpenses) {
             total += expense.amount;
@@ -353,7 +374,7 @@ public class HomeFragment extends Fragment {
                     }
 
                     if (dataManager.updateExpense(expense.id, selectedCategory[0], amount, 
-                            note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date)) {
+                            note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date, expense.imageUri)) {
                         loadExpenses();
                         Toast.makeText(requireContext(), "Expense updated", Toast.LENGTH_SHORT).show();
                     } else {
@@ -425,7 +446,7 @@ public class HomeFragment extends Fragment {
             .setPositiveButton("Update Anyway", (dialog, which) -> {
                 // User chose to update despite exceeding budget
                 if (dataManager.updateExpense(expense.id, category, amount, 
-                        note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date)) {
+                        note.isEmpty() ? "No note" : note, date.isEmpty() ? "Today" : date, expense.imageUri)) {
                     loadExpenses();
                     Toast.makeText(requireContext(), "Expense updated", Toast.LENGTH_SHORT).show();
                 } else {
